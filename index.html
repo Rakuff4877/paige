@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E8CF4A">
+<title>Paige Lite</title>
+<meta name="description" content="Paige Lite — find your next book with a 3-question quiz, keep a reading shelf, and track your reading streak.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Paige">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #111111; --paper: #FFFFFF; --sky: #DCE3EA; --sun: #E8CF4A; --coral: #E8746C;
+    --violet: #5B4BD6; --cream: #EDE6D6; --mint: #3DBE5B; --tangerine: #F09A3A; --muted: #555555;
+    --display: 'Anton', 'Impact', 'Arial Narrow', sans-serif;
+    --sans: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+    --mono: 'Space Mono', ui-monospace, 'SF Mono', monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--cream); color: var(--ink); font-family: var(--sans);
+    -webkit-font-smoothing: antialiased; line-height: 1.45;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+  button { font: inherit; color: inherit; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+
+  /* Header */
+  header { background: var(--sun); border-bottom: 2px solid var(--ink); }
+  header .wrap { display: flex; align-items: center; justify-content: space-between; padding-top: 14px; padding-bottom: 14px; }
+  .logo { font-family: var(--display); font-size: 2rem; letter-spacing: .03em; line-height: 1; }
+  .logo span { background: var(--ink); color: var(--sun); padding: 0 .3rem; margin-left: .2rem; font-size: .9rem; vertical-align: middle; }
+  .tagline { font-family: var(--mono); font-size: .7rem; text-transform: uppercase; }
+
+  h1, h2, h3 { font-family: var(--display); font-weight: 400; letter-spacing: .02em; text-transform: uppercase; margin: 0; line-height: 1.05; }
+  h1 { font-size: 2.2rem; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.15rem; }
+  .eyebrow { font-family: var(--mono); font-size: .72rem; text-transform: uppercase; color: var(--muted); margin: 0 0 .35rem; }
+  .muted { color: var(--muted); }
+
+  .box { background: var(--paper); border: 2px solid var(--ink); box-shadow: 5px 5px 0 var(--ink); padding: 16px; }
+  section.view { padding: 22px 0 8px; }
+  .stack > * + * { margin-top: 18px; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+    padding: .7rem 1.2rem; border: 2px solid var(--ink); background: var(--paper);
+    font-family: var(--display); font-size: 1rem; letter-spacing: .04em; text-transform: uppercase;
+    box-shadow: 4px 4px 0 var(--ink); cursor: pointer; transition: transform 80ms, box-shadow 80ms;
+    min-height: 44px;
+  }
+  .btn:active { transform: translate(4px,4px); box-shadow: none; }
+  .btn:focus-visible, .chip:focus-visible, .nav button:focus-visible { outline: 3px solid var(--violet); outline-offset: 3px; }
+  .btn-coral { background: var(--coral); } .btn-violet { background: var(--violet); color: #fff; } .btn-mint { background: var(--mint); }
+  .btn-sm { padding: .35rem .7rem; font-size: .8rem; min-height: 36px; box-shadow: 3px 3px 0 var(--ink); }
+  .btn-block { width: 100%; }
+  .btn:disabled { background: #e3e0d8; color: #888; border-color: #888; box-shadow: 4px 4px 0 #bbb; cursor: not-allowed; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip {
+    padding: .45rem .8rem; border: 2px solid var(--ink); background: var(--paper); font-weight: 600; font-size: .9rem;
+    box-shadow: 3px 3px 0 var(--ink); cursor: pointer; min-height: 40px;
+  }
+  .chip[aria-pressed="true"] { background: var(--ink); color: #fff; box-shadow: 3px 3px 0 var(--coral); }
+  .q-label { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .step { font-family: var(--mono); font-size: .75rem; background: var(--sun); border: 1.5px solid var(--ink); padding: .05rem .4rem; }
+
+  /* Book card */
+  .book { display: grid; grid-template-columns: 64px 1fr; gap: 14px; }
+  .cover {
+    width: 64px; height: 92px; border: 2px solid var(--ink); display: flex; align-items: flex-end;
+    padding: 5px; font-family: var(--display); font-size: .62rem; line-height: 1.05; text-transform: uppercase; overflow: hidden;
+  }
+  .book h3 { font-size: 1.1rem; }
+  .author { font-size: .85rem; color: var(--muted); margin: 2px 0 6px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+  .tag { font-family: var(--mono); font-size: .62rem; border: 1.5px solid var(--ink); padding: .05rem .35rem; text-transform: uppercase; background: var(--paper); }
+  .tag-hit { background: var(--sun); }
+  .why { font-size: .85rem; border-left: 3px solid var(--coral); padding-left: 8px; margin: 0 0 10px; }
+  .score { font-family: var(--mono); font-size: .7rem; float: right; background: var(--ink); color: #fff; padding: .1rem .4rem; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  /* Shelf */
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .empty { text-align: center; padding: 26px 16px; border: 2px dashed var(--ink); background: rgba(255,255,255,.5); }
+
+  /* Streak */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stat { background: var(--paper); border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 10px; text-align: center; }
+  .stat b { display: block; font-family: var(--display); font-size: 2rem; font-weight: 400; line-height: 1; }
+  .stat small { font-family: var(--mono); font-size: .62rem; text-transform: uppercase; }
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .day { aspect-ratio: 1; border: 2px solid var(--ink); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: .7rem; background: var(--paper); }
+  .day.on { background: var(--mint); font-weight: 700; }
+  .day.today { outline: 3px solid var(--violet); outline-offset: 1px; }
+  .row { display: flex; gap: 10px; align-items: stretch; }
+  input[type=number] {
+    flex: 1; min-width: 0; border: 2px solid var(--ink); padding: .6rem .7rem; font: inherit; font-size: 1rem; background: var(--paper);
+  }
+  .log { list-style: none; padding: 0; margin: 0; font-size: .9rem; }
+  .log li { display: flex; justify-content: space-between; border-bottom: 1.5px dashed var(--ink); padding: 6px 0; }
+
+  /* Bottom nav */
+  .nav {
+    position: fixed; left: 0; right: 0; bottom: 0; background: var(--ink); border-top: 2px solid var(--ink);
+    padding-bottom: env(safe-area-inset-bottom); z-index: 10;
+  }
+  .nav .wrap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 10px; padding-bottom: 10px; }
+  .nav button {
+    background: var(--paper); border: 2px solid var(--paper); font-family: var(--display); text-transform: uppercase; letter-spacing: .04em;
+    font-size: .95rem; padding: .55rem 0; cursor: pointer; min-height: 44px;
+  }
+  .nav button[aria-current="page"] { background: var(--sun); }
+  .badge { font-family: var(--mono); font-size: .65rem; background: var(--coral); border: 1.5px solid var(--ink); padding: 0 .3rem; margin-left: .25rem; vertical-align: middle; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: #fff; padding: .55rem 1rem; font-weight: 600; font-size: .9rem; opacity: 0; transition: .2s; pointer-events: none; z-index: 20;
+    border: 2px solid var(--sun); max-width: calc(100% - 32px);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  [hidden] { display: none !important; }
+  footer { font-family: var(--mono); font-size: .7rem; color: var(--muted); text-align: center; padding: 20px 16px 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="logo">PAIGE<span>LITE</span></div>
+    <div class="tagline">Find your next read</div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- MATCH: quiz -->
+  <section class="view stack" id="view-match">
+    <div>
+      <p class="eyebrow">3 quick questions</p>
+      <h1>What should I read next?</h1>
+      <p class="muted">Pick what you're in the mood for. Paige scores every book in its library against your answers and shows the best matches, with the reason for each.</p>
+    </div>
+
+    <div class="box">
+      <div class="q-label"><h2>Genres</h2><span class="step">1 / 3 · pick any</span></div>
+      <div class="chips" id="q-genre"></div>
+    </div>
+
+    <div class="box">
+      <div class="q-label"><h2>Mood</h2><span class="step">2 / 3 · pick one</span></div>
+      <div class="chips" id="q-mood"></div>
+    </div>
+
+    <div class="box">
+      <div class="q-label"><h2>Pace</h2><span class="step">3 / 3 · pick one</span></div>
+      <div class="chips" id="q-pace"></div>
+    </div>
+
+    <div class="row">
+      <button class="btn btn-coral btn-block" id="btn-match">Find my books</button>
+      <button class="btn" id="btn-reset" aria-label="Clear answers">Reset</button>
+    </div>
+
+    <div id="results" class="stack" hidden></div>
+  </section>
+
+  <!-- SHELF -->
+  <section class="view stack" id="view-shelf" hidden>
+    <div>
+      <p class="eyebrow">Your books</p>
+      <h1>My shelf</h1>
+    </div>
+    <div class="tabs" id="shelf-tabs"></div>
+    <div id="shelf-list" class="stack"></div>
+  </section>
+
+  <!-- STREAK -->
+  <section class="view stack" id="view-streak" hidden>
+    <div>
+      <p class="eyebrow">Read a little every day</p>
+      <h1>Reading streak</h1>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="st-current">0</b><small>Day streak</small></div>
+      <div class="stat"><b id="st-best">0</b><small>Best streak</small></div>
+      <div class="stat"><b id="st-pages">0</b><small>Pages · 14 days</small></div>
+    </div>
+    <div class="box">
+      <h2 style="margin-bottom:10px">Log today</h2>
+      <div class="row">
+        <input type="number" id="pages-input" min="1" max="2000" inputmode="numeric" placeholder="Pages read today" aria-label="Pages read today">
+        <button class="btn btn-mint" id="btn-log">Log</button>
+      </div>
+      <p class="muted" id="today-note" style="margin:10px 0 0;font-size:.85rem"></p>
+    </div>
+    <div class="box">
+      <h2 style="margin-bottom:10px">Last 14 days</h2>
+      <div class="days" id="days"></div>
+    </div>
+    <div class="box">
+      <h2 style="margin-bottom:6px">Recent entries</h2>
+      <ul class="log" id="log"></ul>
+    </div>
+  </section>
+
+  <footer>Paige Lite · works offline · your data stays in this browser</footer>
+</main>
+
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <button data-view="match" aria-current="page">Match</button>
+    <button data-view="shelf">Shelf<span class="badge" id="shelf-count" hidden></span></button>
+    <button data-view="streak">Streak</button>
+  </div>
+</nav>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ───────────────────────── Book library (fixed data, no AI) ───────────────────────── */
+const GENRES = ['Literary', 'Mystery', 'Sci-Fi', 'Fantasy', 'Romance', 'Nonfiction', 'History', 'Thriller'];
+const MOODS  = ['Hopeful', 'Dark', 'Funny', 'Thoughtful', 'Adventurous', 'Emotional'];
+const PACES  = ['Fast', 'Medium', 'Slow'];
+
+const BOOKS = [
+  // Literary
+  { id: 1,  t: 'Beloved', a: 'Toni Morrison', g: 'Literary', m: ['Dark', 'Emotional'], p: 'Slow' },
+  { id: 2,  t: 'Their Eyes Were Watching God', a: 'Zora Neale Hurston', g: 'Literary', m: ['Hopeful', 'Emotional'], p: 'Medium' },
+  { id: 3,  t: 'The Kite Runner', a: 'Khaled Hosseini', g: 'Literary', m: ['Emotional', 'Dark'], p: 'Medium' },
+  { id: 4,  t: 'Homegoing', a: 'Yaa Gyasi', g: 'Literary', m: ['Thoughtful', 'Emotional'], p: 'Medium' },
+  { id: 5,  t: 'A Man Called Ove', a: 'Fredrik Backman', g: 'Literary', m: ['Funny', 'Hopeful'], p: 'Fast' },
+  { id: 6,  t: 'To Kill a Mockingbird', a: 'Harper Lee', g: 'Literary', m: ['Thoughtful', 'Hopeful'], p: 'Medium' },
+  // Mystery
+  { id: 7,  t: 'And Then There Were None', a: 'Agatha Christie', g: 'Mystery', m: ['Dark', 'Adventurous'], p: 'Fast' },
+  { id: 8,  t: 'The Thursday Murder Club', a: 'Richard Osman', g: 'Mystery', m: ['Funny', 'Hopeful'], p: 'Medium' },
+  { id: 9,  t: 'Devil in a Blue Dress', a: 'Walter Mosley', g: 'Mystery', m: ['Dark', 'Adventurous'], p: 'Fast' },
+  { id: 10, t: 'The Hound of the Baskervilles', a: 'Arthur Conan Doyle', g: 'Mystery', m: ['Adventurous', 'Thoughtful'], p: 'Fast' },
+  { id: 11, t: 'Big Little Lies', a: 'Liane Moriarty', g: 'Mystery', m: ['Funny', 'Dark'], p: 'Fast' },
+  // Sci-Fi
+  { id: 12, t: 'Project Hail Mary', a: 'Andy Weir', g: 'Sci-Fi', m: ['Funny', 'Hopeful', 'Adventurous'], p: 'Fast' },
+  { id: 13, t: 'Kindred', a: 'Octavia E. Butler', g: 'Sci-Fi', m: ['Dark', 'Thoughtful'], p: 'Medium' },
+  { id: 14, t: 'Dune', a: 'Frank Herbert', g: 'Sci-Fi', m: ['Adventurous', 'Thoughtful'], p: 'Slow' },
+  { id: 15, t: 'Klara and the Sun', a: 'Kazuo Ishiguro', g: 'Sci-Fi', m: ['Thoughtful', 'Emotional'], p: 'Slow' },
+  { id: 16, t: 'The Martian', a: 'Andy Weir', g: 'Sci-Fi', m: ['Funny', 'Adventurous'], p: 'Fast' },
+  // Fantasy
+  { id: 17, t: 'The Hobbit', a: 'J.R.R. Tolkien', g: 'Fantasy', m: ['Adventurous', 'Hopeful'], p: 'Medium' },
+  { id: 18, t: 'Children of Blood and Bone', a: 'Tomi Adeyemi', g: 'Fantasy', m: ['Adventurous', 'Dark'], p: 'Fast' },
+  { id: 19, t: 'The House in the Cerulean Sea', a: 'TJ Klune', g: 'Fantasy', m: ['Hopeful', 'Funny'], p: 'Medium' },
+  { id: 20, t: 'The Name of the Wind', a: 'Patrick Rothfuss', g: 'Fantasy', m: ['Adventurous', 'Thoughtful'], p: 'Slow' },
+  { id: 21, t: 'Circe', a: 'Madeline Miller', g: 'Fantasy', m: ['Emotional', 'Thoughtful'], p: 'Medium' },
+  // Romance
+  { id: 22, t: 'Pride and Prejudice', a: 'Jane Austen', g: 'Romance', m: ['Funny', 'Hopeful'], p: 'Slow' },
+  { id: 23, t: 'Beach Read', a: 'Emily Henry', g: 'Romance', m: ['Funny', 'Emotional'], p: 'Fast' },
+  { id: 24, t: 'Get a Life, Chloe Brown', a: 'Talia Hibbert', g: 'Romance', m: ['Funny', 'Hopeful'], p: 'Fast' },
+  { id: 25, t: 'Me Before You', a: 'Jojo Moyes', g: 'Romance', m: ['Emotional'], p: 'Medium' },
+  { id: 26, t: 'The Seven Husbands of Evelyn Hugo', a: 'Taylor Jenkins Reid', g: 'Romance', m: ['Emotional', 'Dark'], p: 'Fast' },
+  // Nonfiction
+  { id: 27, t: 'Just Mercy', a: 'Bryan Stevenson', g: 'Nonfiction', m: ['Thoughtful', 'Emotional', 'Hopeful'], p: 'Medium' },
+  { id: 28, t: 'Becoming', a: 'Michelle Obama', g: 'Nonfiction', m: ['Hopeful', 'Thoughtful'], p: 'Medium' },
+  { id: 29, t: 'Born a Crime', a: 'Trevor Noah', g: 'Nonfiction', m: ['Funny', 'Thoughtful'], p: 'Fast' },
+  { id: 30, t: 'Thinking, Fast and Slow', a: 'Daniel Kahneman', g: 'Nonfiction', m: ['Thoughtful'], p: 'Slow' },
+  { id: 31, t: 'Atomic Habits', a: 'James Clear', g: 'Nonfiction', m: ['Hopeful'], p: 'Fast' },
+  // History
+  { id: 32, t: 'The Warmth of Other Suns', a: 'Isabel Wilkerson', g: 'History', m: ['Thoughtful', 'Emotional'], p: 'Slow' },
+  { id: 33, t: 'Team of Rivals', a: 'Doris Kearns Goodwin', g: 'History', m: ['Thoughtful'], p: 'Slow' },
+  { id: 34, t: 'Hidden Figures', a: 'Margot Lee Shetterly', g: 'History', m: ['Hopeful', 'Thoughtful'], p: 'Medium' },
+  { id: 35, t: 'The Devil in the White City', a: 'Erik Larson', g: 'History', m: ['Dark', 'Adventurous'], p: 'Medium' },
+  { id: 36, t: 'Unbroken', a: 'Laura Hillenbrand', g: 'History', m: ['Adventurous', 'Hopeful', 'Emotional'], p: 'Medium' },
+  // Thriller
+  { id: 37, t: 'Gone Girl', a: 'Gillian Flynn', g: 'Thriller', m: ['Dark'], p: 'Fast' },
+  { id: 38, t: 'The Firm', a: 'John Grisham', g: 'Thriller', m: ['Adventurous', 'Dark'], p: 'Fast' },
+  { id: 39, t: 'A Time to Kill', a: 'John Grisham', g: 'Thriller', m: ['Dark', 'Thoughtful'], p: 'Medium' },
+  { id: 40, t: 'The Silent Patient', a: 'Alex Michaelides', g: 'Thriller', m: ['Dark'], p: 'Fast' },
+  { id: 41, t: 'The Da Vinci Code', a: 'Dan Brown', g: 'Thriller', m: ['Adventurous'], p: 'Fast' },
+];
+
+const COVER_COLORS = { Literary: '#E8746C', Mystery: '#DCE3EA', 'Sci-Fi': '#5B4BD6', Fantasy: '#3DBE5B', Romance: '#F09A3A', Nonfiction: '#E8CF4A', History: '#EDE6D6', Thriller: '#111111' };
+const DARK_COVERS = new Set(['Sci-Fi', 'Thriller']);
+
+/* ───────────────────────── Matching rules ─────────────────────────
+   Genre match  +3 points
+   Mood match   +2 points
+   Pace match   +1 point
+   A book needs at least one match to show. Ties are broken by title.
+   ──────────────────────────────────────────────────────────────── */
+const POINTS = { genre: 3, mood: 2, pace: 1 };
+const MAX_RESULTS = 6;
+
+function scoreBook(book, ans) {
+  let score = 0; const reasons = [];
+  if (ans.genres.length && ans.genres.includes(book.g)) { score += POINTS.genre; reasons.push(`it's ${article(book.g)} ${book.g.toLowerCase()} pick`); }
+  if (ans.mood && book.m.includes(ans.mood)) { score += POINTS.mood; reasons.push(`it reads as ${ans.mood.toLowerCase()}`); }
+  if (ans.pace && book.p === ans.pace) { score += POINTS.pace; reasons.push(`it moves at a ${ans.pace.toLowerCase()} pace`); }
+  return { book, score, reasons };
+}
+function article(word) { return /^[aeiou]/i.test(word) ? 'an' : 'a'; }
+function joinReasons(r) {
+  if (r.length === 1) return r[0];
+  return r.slice(0, -1).join(', ') + ' and ' + r[r.length - 1];
+}
+function matchBooks(ans) {
+  return BOOKS.map(b => scoreBook(b, ans))
+    .filter(x => x.score > 0)
+    .sort((a, b) => b.score - a.score || a.book.t.localeCompare(b.book.t))
+    .slice(0, MAX_RESULTS);
+}
+
+/* ───────────────────────── Storage (browser only) ───────────────────────── */
+const KEY = 'paige-lite-v1';
+function load() {
+  try { const raw = localStorage.getItem(KEY); if (raw) return JSON.parse(raw); } catch (e) {}
+  return { shelf: {}, log: {} };   // shelf: {bookId: 'want'|'reading'|'done'}, log: {'YYYY-MM-DD': pages}
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+const state = load();
+state.shelf ||= {}; state.log ||= {};
+
+/* ───────────────────────── Helpers ───────────────────────── */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 1800); }
+function dayKey(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+
+function coverHTML(b) {
+  const bg = COVER_COLORS[b.g], fg = DARK_COVERS.has(b.g) ? '#fff' : '#111';
+  return `<div class="cover" style="background:${bg};color:${fg}" aria-hidden="true">${esc(b.t)}</div>`;
+}
+const SHELF_LABELS = { want: 'Want to read', reading: 'Reading', done: 'Finished' };
+
+function shelfButtons(b) {
+  const cur = state.shelf[b.id];
+  const btn = (k, cls) => `<button class="btn btn-sm ${cur === k ? cls : ''}" data-shelf="${k}" data-id="${b.id}" aria-pressed="${cur === k}">${SHELF_LABELS[k]}</button>`;
+  return btn('want', 'btn-coral') + btn('reading', 'btn-violet') + btn('done', 'btn-mint') +
+    (cur ? `<button class="btn btn-sm" data-shelf="remove" data-id="${b.id}">Remove</button>` : '');
+}
+function bookCardHTML(b, extra = '', hits = {}) {
+  const tag = (txt, hit) => `<span class="tag ${hit ? 'tag-hit' : ''}">${esc(txt)}</span>`;
+  return `<article class="box book">
+    ${coverHTML(b)}
+    <div>
+      ${extra.score ?? ''}
+      <h3>${esc(b.t)}</h3>
+      <p class="author">${esc(b.a)}</p>
+      <div class="tags">${tag(b.g, hits.genre)}${b.m.map(m => tag(m, hits.mood === m)).join('')}${tag(b.p + ' pace', hits.pace)}</div>
+      ${extra.why ?? ''}
+      <div class="actions">${shelfButtons(b)}</div>
+    </div>
+  </article>`;
+}
+
+/* ───────────────────────── Quiz ───────────────────────── */
+const answers = { genres: [], mood: null, pace: null };
+
+function renderChips(el, options, isMulti, key) {
+  el.innerHTML = options.map(o => {
+    const on = isMulti ? answers[key].includes(o) : answers[key] === o;
+    return `<button class="chip" data-val="${esc(o)}" aria-pressed="${on}">${esc(o)}</button>`;
+  }).join('');
+  el.onclick = e => {
+    const v = e.target.closest('.chip')?.dataset.val; if (!v) return;
+    if (isMulti) answers[key] = answers[key].includes(v) ? answers[key].filter(x => x !== v) : [...answers[key], v];
+    else answers[key] = answers[key] === v ? null : v;
+    renderChips(el, options, isMulti, key);
+    updateMatchBtn();
+  };
+}
+function updateMatchBtn() {
+  $('#btn-match').disabled = !(answers.genres.length || answers.mood || answers.pace);
+}
+function renderQuiz() {
+  renderChips($('#q-genre'), GENRES, true, 'genres');
+  renderChips($('#q-mood'), MOODS, false, 'mood');
+  renderChips($('#q-pace'), PACES, false, 'pace');
+  updateMatchBtn();
+}
+let lastMatches = null;
+function renderResults() {
+  const box = $('#results');
+  if (!lastMatches) { box.hidden = true; return; }
+  box.hidden = false;
+  if (!lastMatches.length) {
+    box.innerHTML = `<div class="empty"><h2>No matches</h2><p class="muted">Try picking more genres or a different mood.</p></div>`;
+    return;
+  }
+  const max = (answers.genres.length ? POINTS.genre : 0) + (answers.mood ? POINTS.mood : 0) + (answers.pace ? POINTS.pace : 0);
+  box.innerHTML = `<div><p class="eyebrow">Best matches</p><h2>Paige picked ${lastMatches.length} for you</h2></div>` +
+    lastMatches.map(({ book, score, reasons }) => bookCardHTML(book, {
+      score: `<span class="score">${score}/${max} match</span>`,
+      why: `<p class="why">Because ${esc(joinReasons(reasons))}.</p>`,
+    }, { genre: answers.genres.includes(book.g), mood: answers.mood, pace: book.p === answers.pace })).join('');
+}
+$('#btn-match').onclick = () => {
+  lastMatches = matchBooks(answers);
+  renderResults();
+  $('#results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+$('#btn-reset').onclick = () => {
+  answers.genres = []; answers.mood = null; answers.pace = null; lastMatches = null;
+  renderQuiz(); renderResults();
+};
+
+/* ───────────────────────── Shelf ───────────────────────── */
+let shelfTab = 'want';
+function renderShelf() {
+  const counts = { want: 0, reading: 0, done: 0 };
+  Object.values(state.shelf).forEach(s => counts[s] = (counts[s] || 0) + 1);
+  $('#shelf-tabs').innerHTML = Object.keys(SHELF_LABELS).map(k =>
+    `<button class="chip" data-tab="${k}" aria-pressed="${shelfTab === k}">${SHELF_LABELS[k]} (${counts[k]})</button>`).join('');
+  const list = BOOKS.filter(b => state.shelf[b.id] === shelfTab);
+  $('#shelf-list').innerHTML = list.length ? list.map(b => bookCardHTML(b)).join('')
+    : `<div class="empty"><h2>Nothing here yet</h2><p class="muted">Take the quiz on the Match tab and tap a shelf button to save a book.</p></div>`;
+  const total = Object.keys(state.shelf).length;
+  const badge = $('#shelf-count'); badge.hidden = !total; badge.textContent = total;
+}
+$('#shelf-tabs').onclick = e => { const k = e.target.closest('[data-tab]')?.dataset.tab; if (k) { shelfTab = k; renderShelf(); } };
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-shelf]'); if (!b) return;
+  const id = Number(b.dataset.id), k = b.dataset.shelf, book = BOOKS.find(x => x.id === id);
+  if (k === 'remove' || state.shelf[id] === k) { delete state.shelf[id]; toast(`Removed "${book.t}"`); }
+  else { state.shelf[id] = k; toast(`"${book.t}" → ${SHELF_LABELS[k]}`); }
+  save(); renderShelf(); renderResults();
+});
+
+/* ───────────────────────── Streak ─────────────────────────
+   A day counts if you logged at least 1 page.
+   Your streak stays alive until the end of the next day,
+   so it isn't broken just because you haven't read yet today.
+   ──────────────────────────────────────────────────────── */
+function streaks() {
+  const today = new Date();
+  let current = 0, d = state.log[dayKey(today)] ? today : addDays(today, -1);
+  while (state.log[dayKey(d)]) { current++; d = addDays(d, -1); }
+  const keys = Object.keys(state.log).sort();
+  let best = 0, run = 0, prev = null;
+  for (const k of keys) {
+    const cur = new Date(k + 'T00:00:00');
+    run = prev && dayKey(addDays(prev, 1)) === k ? run + 1 : 1;
+    best = Math.max(best, run); prev = cur;
+  }
+  return { current, best };
+}
+function renderStreak() {
+  const { current, best } = streaks();
+  const today = new Date();
+  let pages14 = 0, cells = '';
+  for (let i = 13; i >= 0; i--) {
+    const d = addDays(today, -i), k = dayKey(d), p = state.log[k] || 0; pages14 += p;
+    cells += `<div class="day ${p ? 'on' : ''} ${i === 0 ? 'today' : ''}" title="${k}: ${p} pages">${d.getDate()}</div>`;
+  }
+  $('#st-current').textContent = current; $('#st-best').textContent = best; $('#st-pages').textContent = pages14;
+  $('#days').innerHTML = cells;
+  const tp = state.log[dayKey(today)];
+  $('#today-note').textContent = tp ? `Logged ${tp} pages today. Logging again replaces today's number.` : 'You have not logged any reading today.';
+  const entries = Object.entries(state.log).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 7);
+  $('#log').innerHTML = entries.length ? entries.map(([k, p]) =>
+    `<li><span>${new Date(k + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span><b>${p} pages</b></li>`).join('')
+    : '<li class="muted">No entries yet.</li>';
+}
+$('#btn-log').onclick = () => {
+  const n = parseInt($('#pages-input').value, 10);
+  if (!Number.isFinite(n) || n < 1 || n > 2000) { toast('Enter a number of pages from 1 to 2000'); return; }
+  state.log[dayKey(new Date())] = n; save();
+  $('#pages-input').value = ''; renderStreak();
+  toast(`Logged ${n} pages. Streak: ${streaks().current} day${streaks().current === 1 ? '' : 's'}`);
+};
+$('#pages-input').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btn-log').click(); });
+
+/* ───────────────────────── Navigation ───────────────────────── */
+document.querySelector('.nav').onclick = e => {
+  const v = e.target.closest('[data-view]')?.dataset.view; if (!v) return;
+  document.querySelectorAll('.nav [data-view]').forEach(b => {
+    if (b.dataset.view === v) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
+  document.querySelectorAll('section.view').forEach(s => s.hidden = s.id !== 'view-' + v);
+  if (v === 'shelf') renderShelf();
+  if (v === 'streak') renderStreak();
+  window.scrollTo(0, 0);
+};
+
+renderQuiz(); renderShelf(); renderStreak();
+
+/* Offline support + install (only works when served over https, e.g. GitHub Pages) */
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>
