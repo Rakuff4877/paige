@@ -99,10 +99,20 @@
   .stat { background: var(--paper); border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 10px; text-align: center; }
   .stat b { display: block; font-family: var(--display); font-size: 2rem; font-weight: 400; line-height: 1; }
   .stat small { font-family: var(--mono); font-size: .62rem; text-transform: uppercase; }
-  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-  .day { aspect-ratio: 1; border: 2px solid var(--ink); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: .7rem; background: var(--paper); }
-  .day.on { background: var(--mint); font-weight: 700; }
-  .day.today { outline: 3px solid var(--violet); outline-offset: 1px; }
+  /* Pages-per-day bar chart (plain HTML/CSS, no library) */
+  .chart-total { font-family: var(--display); font-size: 1.8rem; line-height: 1; margin: 0 0 14px; }
+  .chart { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); }
+  .col { display: flex; flex-direction: column; align-items: stretch; min-width: 0; }
+  .plot { height: 150px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding: 0 2px; border-bottom: 3px solid var(--ink); }
+  .bar { width: 100%; background: var(--coral); border: 2px solid var(--ink); border-bottom: 0; box-shadow: 2px 0 0 var(--ink); }
+  .bar.today { background: var(--sun); }
+  .bar.zero { height: 4px; background: var(--paper); box-shadow: none; }
+  .bar-val { font-family: var(--mono); font-size: .65rem; font-weight: 700; line-height: 1; margin-bottom: 3px; white-space: nowrap; }
+  .bar-val.sm { font-size: .5rem; letter-spacing: -.06em; }
+  .bar-day { font-family: var(--mono); font-size: .6rem; line-height: 1.15; text-align: center; padding-top: 4px; white-space: nowrap; }
+  .bar-day.today { font-weight: 700; }
+  .bar-day b { display: block; font-weight: inherit; color: var(--muted); }
+  .bar-day.today b { color: var(--ink); }
   .row { display: flex; gap: 10px; align-items: stretch; }
   input[type=number] {
     flex: 1; min-width: 0; border: 2px solid var(--ink); padding: .6rem .7rem; font: inherit; font-size: 1rem; background: var(--paper);
@@ -194,7 +204,7 @@
     <div class="stats">
       <div class="stat"><b id="st-current">0</b><small>Day streak</small></div>
       <div class="stat"><b id="st-best">0</b><small>Best streak</small></div>
-      <div class="stat"><b id="st-pages">0</b><small>Pages · 14 days</small></div>
+      <div class="stat"><b id="st-today">0</b><small>Pages today</small></div>
     </div>
     <div class="box">
       <h2 style="margin-bottom:10px">Log today</h2>
@@ -205,8 +215,10 @@
       <p class="muted" id="today-note" style="margin:10px 0 0;font-size:.85rem"></p>
     </div>
     <div class="box">
-      <h2 style="margin-bottom:10px">Last 14 days</h2>
-      <div class="days" id="days"></div>
+      <h2 style="margin-bottom:10px">Pages per day</h2>
+      <p class="eyebrow">Total · last 14 days</p>
+      <p class="chart-total" id="chart-total">0 pages</p>
+      <div class="chart" id="chart" role="img" aria-label="Pages read per day, last 14 days"></div>
     </div>
     <div class="box">
       <h2 style="margin-bottom:6px">Recent entries</h2>
@@ -455,13 +467,28 @@ function streaks() {
 function renderStreak() {
   const { current, best } = streaks();
   const today = new Date();
-  let pages14 = 0, cells = '';
+  const PLOT = 128;   // px available for the tallest bar (plot height minus room for its label)
+  const days = [];
   for (let i = 13; i >= 0; i--) {
-    const d = addDays(today, -i), k = dayKey(d), p = state.log[k] || 0; pages14 += p;
-    cells += `<div class="day ${p ? 'on' : ''} ${i === 0 ? 'today' : ''}" title="${k}: ${p} pages">${d.getDate()}</div>`;
+    const d = addDays(today, -i), k = dayKey(d);
+    days.push({ d, k, p: Number(state.log[k]) || 0, isToday: i === 0 });
   }
-  $('#st-current').textContent = current; $('#st-best').textContent = best; $('#st-pages').textContent = pages14;
-  $('#days').innerHTML = cells;
+  const total = days.reduce((s, x) => s + x.p, 0);
+  const max = Math.max(0, ...days.map(x => x.p));
+  $('#chart').innerHTML = days.map(({ d, k, p, isToday }) => {
+    const h = p ? Math.max(6, Math.round(p / max * PLOT)) : 0;
+    const bar = p ? `<div class="bar ${isToday ? 'today' : ''}" style="height:${h}px"></div>` : `<div class="bar zero"></div>`;
+    const wd = d.toLocaleDateString(undefined, { weekday: 'narrow' });
+    return `<div class="col" title="${k}: ${p} page${p === 1 ? '' : 's'}">
+      <div class="plot"><span class="bar-val ${p >= 100 ? 'sm' : ''}">${p}</span>${bar}</div>
+      <div class="bar-day ${isToday ? 'today' : ''}">${esc(wd)}<b>${d.getDate()}</b></div>
+    </div>`;
+  }).join('');
+  $('#chart').setAttribute('aria-label', `Pages read per day, last 14 days, total ${total}. ` +
+    days.map(x => `${x.d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}: ${x.p}`).join(', '));
+  $('#chart-total').textContent = `${total.toLocaleString()} page${total === 1 ? '' : 's'}`;
+  $('#st-current').textContent = current; $('#st-best').textContent = best;
+  $('#st-today').textContent = state.log[dayKey(today)] || 0;
   const tp = state.log[dayKey(today)];
   $('#today-note').textContent = tp ? `Logged ${tp} pages today. Logging again replaces today's number.` : 'You have not logged any reading today.';
   const entries = Object.entries(state.log).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 7);
