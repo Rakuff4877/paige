@@ -56,3 +56,40 @@
 
 **Next step**
 - Open the updated app on my phone, confirm my real logs show as bars and my shelf is unchanged, and check it still opens in airplane mode.
+
+## Session 3: Wednesday, November 25, 2026
+
+**What I asked Claude Code to do**
+- Before writing any code, explain exactly how Match scores books (every rule and point value, how ties are broken, why it shows the top 6) and walk through Mystery + Funny + Fast. Then ask me about every choice instead of deciding on its own.
+- Make Match explain itself: show each book's point breakdown and add a short "How matching works" note.
+- Let me rate any book on my shelf from 1 to 10 with large, thumb-friendly buttons; show "Not rated" when there is none, and let me change or clear it.
+- Keep all Project 2 rules, keep my saved data, and update the offline cache version.
+
+**What it explained about the old scoring**
+- Genre match +3, mood match +2, pace match +1 (max 6). Books with 0 points were hidden. Ties were sorted by full title (so "The Hound…" sorted under T). It showed exactly 6 results because of a fixed setting chosen for a short phone list.
+- For Mystery + Funny + Fast, six books tied at 3 points for 6th place, and only "A Man Called Ove" was shown, purely because "A" comes first alphabetically.
+- With 3/2/1, a book matching only my genre tied with a book matching my mood and pace (both 3 points).
+
+**What I decided**
+- New weights: genre +4, mood +2, pace +1 (max 7). Every combination now has its own score, so genre always outranks mood, and mood always outranks pace.
+- Show the top 6 plus any books tied with 6th place, up to 10, with a note when tied books are left out ("+1 more book also scored 3 points").
+- Break ties by title A–Z, ignoring a leading "The", "A" or "An".
+- The point breakdown replaces the old "Because…" sentence; the score badge stays. Misses show the book's own value with +0, and skipped questions say "not asked".
+- Ratings: a Rate button opens a 5×2 grid of numbers with Clear and Done. Removing a book from the shelf keeps its rating. Rated books also show "Your rating" on Match results.
+
+**What it produced**
+- Example line: "Genre: Mystery +4 · Mood: Funny +2 · Pace: Fast +1 = 7 points".
+- The "How matching works" box is built from the same point values the code uses, so the note can't drift from the actual rules.
+- Ratings are saved inside my existing saved data (same storage key); older saves load normally and just start with no ratings.
+- Offline cache version went from `paige-lite-v3` to `paige-lite-v4`.
+
+**Testing**
+- On a local copy with sample data (separate from my phone): Mystery + Funny + Fast showed 10 books: Big Little Lies (7), The Thursday Murder Club (6), three Mystery books at 5, then five books at 3, with "+1 more book also scored 3 points" (Project Hail Mary).
+- History + Dark + Fast put the four History-only books (4 points) above the dark, fast books from other genres (3 points).
+- Skipping Pace showed "Pace: not asked" and a "/6" badge.
+- Rated The Martian 8, changed to 3, cleared it ("Not rated"), rated 9, removed it from the shelf and re-added it, and the 9/10 came back. It also showed "Your rating: 9/10" on Match.
+- Loaded an older save with no ratings: shelf, streak and the pages bar chart all still worked.
+- Rating buttons measured 52px tall; no sideways scrolling at 320px or 375px.
+
+**Next step**
+- Test both features on my phone.

@@ -2,7 +2,7 @@
    App files: try the network first, so a republished version shows up right away,
    and fall back to the saved copy when there is no connection.
    Fonts: use the saved copy first (they never change). */
-const VERSION = 'paige-lite-v3';
+const VERSION = 'paige-lite-v4';
 const APP_FILES = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

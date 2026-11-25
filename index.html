@@ -89,6 +89,27 @@
   .why { font-size: .85rem; border-left: 3px solid var(--coral); padding-left: 8px; margin: 0 0 10px; }
   .score { font-family: var(--mono); font-size: .7rem; float: right; background: var(--ink); color: #fff; padding: .1rem .4rem; }
   .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .breakdown { font-family: var(--mono); font-size: .75rem; line-height: 1.5; overflow-wrap: anywhere; }
+  .more-note { font-family: var(--mono); font-size: .75rem; text-align: center; border: 2px dashed var(--ink); padding: 10px; margin: 0; background: rgba(255,255,255,.5); }
+  .how { background: var(--sun); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); padding: 12px 14px; }
+  .how p { margin: 0; font-size: .88rem; }
+  .how .eyebrow { margin-bottom: .3rem; }
+  .btn-sun { background: var(--sun); }
+
+  /* Rating 1–10 */
+  .rating-row { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 2px dashed var(--ink); padding-top: 10px; }
+  .rating-val { font-family: var(--mono); font-size: .8rem; text-transform: uppercase; }
+  .rating-val b { font-family: var(--display); font-weight: 400; font-size: 1.25rem; letter-spacing: .02em; }
+  .rate-panel { grid-column: 1 / -1; }
+  .rate-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  .rate-btn {
+    min-height: 52px; border: 2px solid var(--ink); background: var(--paper); box-shadow: 3px 3px 0 var(--ink);
+    font-family: var(--display); font-size: 1.35rem; cursor: pointer; touch-action: manipulation; transition: transform 80ms, box-shadow 80ms;
+  }
+  .rate-btn:active { transform: translate(3px,3px); box-shadow: none; }
+  .rate-btn[aria-pressed="true"] { background: var(--ink); color: #fff; box-shadow: 3px 3px 0 var(--coral); }
+  .rate-btn:focus-visible { outline: 3px solid var(--violet); outline-offset: 3px; }
+  .rate-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 12px; }
 
   /* Shelf */
   .tabs { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -159,7 +180,12 @@
     <div>
       <p class="eyebrow">3 quick questions</p>
       <h1>What should I read next?</h1>
-      <p class="muted">Pick what you're in the mood for. Paige scores every book in its library against your answers and shows the best matches, with the reason for each.</p>
+      <p class="muted">Pick what you're in the mood for. Paige scores every book in its library against your answers and shows the best matches, with the points behind each one.</p>
+    </div>
+
+    <div class="how">
+      <p class="eyebrow" style="color:var(--ink)">How matching works</p>
+      <p id="how-text"></p>
     </div>
 
     <div class="box">
@@ -301,31 +327,40 @@ const COVER_COLORS = { Literary: '#E8746C', Mystery: '#DCE3EA', 'Sci-Fi': '#5B4B
 const DARK_COVERS = new Set(['Sci-Fi', 'Thriller']);
 
 /* ───────────────────────── Matching rules ─────────────────────────
-   Genre match  +3 points
-   Mood match   +2 points
-   Pace match   +1 point
-   A book needs at least one match to show. Ties are broken by title.
+   Genre match  +4 points   (book's genre is one you picked)
+   Mood match   +2 points   (one of the book's moods is the mood you picked)
+   Pace match   +1 point    (book's pace is the pace you picked)
+   With 4/2/1 every combination has its own score, so genre always
+   outranks mood, and mood always outranks pace.
+   A book needs at least 1 point to show. Show the top 6, plus any
+   books tied with 6th place, up to 10. Ties are broken by title A–Z,
+   ignoring a leading "The", "A" or "An".
    ──────────────────────────────────────────────────────────────── */
-const POINTS = { genre: 3, mood: 2, pace: 1 };
-const MAX_RESULTS = 6;
+const POINTS = { genre: 4, mood: 2, pace: 1 };
+const MIN_RESULTS = 6;
+const MAX_RESULTS = 10;
 
 function scoreBook(book, ans) {
-  let score = 0; const reasons = [];
-  if (ans.genres.length && ans.genres.includes(book.g)) { score += POINTS.genre; reasons.push(`it's ${article(book.g)} ${book.g.toLowerCase()} pick`); }
-  if (ans.mood && book.m.includes(ans.mood)) { score += POINTS.mood; reasons.push(`it reads as ${ans.mood.toLowerCase()}`); }
-  if (ans.pace && book.p === ans.pace) { score += POINTS.pace; reasons.push(`it moves at a ${ans.pace.toLowerCase()} pace`); }
-  return { book, score, reasons };
+  const parts = [
+    { label: 'Genre', value: book.g,          asked: ans.genres.length > 0, hit: ans.genres.includes(book.g), w: POINTS.genre },
+    { label: 'Mood',  value: book.m.includes(ans.mood) ? ans.mood : book.m.join('/'), asked: !!ans.mood, hit: book.m.includes(ans.mood), w: POINTS.mood },
+    { label: 'Pace',  value: book.p,          asked: !!ans.pace,            hit: book.p === ans.pace,         w: POINTS.pace },
+  ].map(p => ({ label: p.label, value: p.value, asked: p.asked, pts: p.asked && p.hit ? p.w : 0 }));
+  return { book, score: parts.reduce((s, p) => s + p.pts, 0), parts };
 }
-function article(word) { return /^[aeiou]/i.test(word) ? 'an' : 'a'; }
-function joinReasons(r) {
-  if (r.length === 1) return r[0];
-  return r.slice(0, -1).join(', ') + ' and ' + r[r.length - 1];
-}
+function sortTitle(t) { return t.replace(/^(the|a|an)\s+/i, ''); }
 function matchBooks(ans) {
-  return BOOKS.map(b => scoreBook(b, ans))
+  const ranked = BOOKS.map(b => scoreBook(b, ans))
     .filter(x => x.score > 0)
-    .sort((a, b) => b.score - a.score || a.book.t.localeCompare(b.book.t))
-    .slice(0, MAX_RESULTS);
+    .sort((a, b) => b.score - a.score || sortTitle(a.book.t).localeCompare(sortTitle(b.book.t)));
+  if (ranked.length <= MIN_RESULTS) return { shown: ranked, hiddenCount: 0, cutoffScore: null };
+  const cutoffScore = ranked[MIN_RESULTS - 1].score;
+  const tied = ranked.filter(x => x.score >= cutoffScore);
+  return { shown: tied.slice(0, MAX_RESULTS), hiddenCount: Math.max(0, tied.length - MAX_RESULTS), cutoffScore };
+}
+function breakdownText(parts, score) {
+  return parts.map(p => p.asked ? `${p.label}: ${p.value} +${p.pts}` : `${p.label}: not asked`).join(' · ') +
+    ` = ${score} point${score === 1 ? '' : 's'}`;
 }
 
 /* ───────────────────────── Storage (browser only) ───────────────────────── */
@@ -336,7 +371,7 @@ function load() {
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
 const state = load();
-state.shelf ||= {}; state.log ||= {};
+state.shelf ||= {}; state.log ||= {}; state.ratings ||= {};   // ratings: {bookId: 1–10} (added in v3; older saves simply have none)
 
 /* ───────────────────────── Helpers ───────────────────────── */
 const $ = s => document.querySelector(s);
@@ -357,7 +392,26 @@ function shelfButtons(b) {
   return btn('want', 'btn-coral') + btn('reading', 'btn-violet') + btn('done', 'btn-mint') +
     (cur ? `<button class="btn btn-sm" data-shelf="remove" data-id="${b.id}">Remove</button>` : '');
 }
-function bookCardHTML(b, extra = '', hits = {}) {
+/* Rating 1–10: stored in state.ratings {bookId: n}. Kept even if the book leaves the shelf. */
+let ratingOpenId = null;
+function ratingHTML(b, mode) {
+  const r = state.ratings[b.id];
+  if (mode === 'match') return r ? `<div class="rating-row"><span class="rating-val">Your rating: <b>${r}/10</b></span></div>` : '';
+  const open = ratingOpenId === b.id;
+  const nums = Array.from({ length: 10 }, (_, i) => i + 1).map(n =>
+    `<button class="rate-btn" data-rate="${n}" data-id="${b.id}" aria-pressed="${r === n}" aria-label="Rate ${n} out of 10">${n}</button>`).join('');
+  return `<div class="rating-row">
+      <span class="rating-val">${r ? `Rating: <b>${r}/10</b>` : '<span class="muted">Not rated</span>'}</span>
+      <button class="btn btn-sm ${open ? 'btn-sun' : ''}" data-rate-toggle="${b.id}" aria-expanded="${open}">${open ? 'Close' : r ? 'Change' : 'Rate'}</button>
+    </div>` + (open ? `<div class="rate-panel" role="group" aria-label="Rate ${esc(b.t)} from 1 to 10">
+      <div class="rate-grid">${nums}</div>
+      <div class="rate-foot">
+        <button class="btn btn-sm" data-rate="clear" data-id="${b.id}" ${r ? '' : 'disabled'}>Clear</button>
+        <button class="btn btn-sm btn-mint" data-rate-toggle="${b.id}">Done</button>
+      </div>
+    </div>` : '');
+}
+function bookCardHTML(b, extra = '', hits = {}, mode = 'shelf') {
   const tag = (txt, hit) => `<span class="tag ${hit ? 'tag-hit' : ''}">${esc(txt)}</span>`;
   return `<article class="box book">
     ${coverHTML(b)}
@@ -369,6 +423,7 @@ function bookCardHTML(b, extra = '', hits = {}) {
       ${extra.why ?? ''}
       <div class="actions">${shelfButtons(b)}</div>
     </div>
+    ${ratingHTML(b, mode)}
   </article>`;
 }
 
@@ -391,6 +446,12 @@ function renderChips(el, options, isMulti, key) {
 function updateMatchBtn() {
   $('#btn-match').disabled = !(answers.genres.length || answers.mood || answers.pace);
 }
+function renderHowNote() {
+  $('#how-text').textContent = `Each book earns points for what matches your answers: genre +${POINTS.genre}, mood +${POINTS.mood}, pace +${POINTS.pace}. ` +
+    `Paige shows the ${MIN_RESULTS} highest scores, plus any books tied with ${MIN_RESULTS}th place (up to ${MAX_RESULTS}), ` +
+    `and breaks ties by title A–Z, ignoring "The", "A" and "An".`;
+}
+renderHowNote();
 function renderQuiz() {
   renderChips($('#q-genre'), GENRES, true, 'genres');
   renderChips($('#q-mood'), MOODS, false, 'mood');
@@ -402,16 +463,18 @@ function renderResults() {
   const box = $('#results');
   if (!lastMatches) { box.hidden = true; return; }
   box.hidden = false;
-  if (!lastMatches.length) {
+  const { shown, hiddenCount, cutoffScore } = lastMatches;
+  if (!shown.length) {
     box.innerHTML = `<div class="empty"><h2>No matches</h2><p class="muted">Try picking more genres or a different mood.</p></div>`;
     return;
   }
   const max = (answers.genres.length ? POINTS.genre : 0) + (answers.mood ? POINTS.mood : 0) + (answers.pace ? POINTS.pace : 0);
-  box.innerHTML = `<div><p class="eyebrow">Best matches</p><h2>Paige picked ${lastMatches.length} for you</h2></div>` +
-    lastMatches.map(({ book, score, reasons }) => bookCardHTML(book, {
+  box.innerHTML = `<div><p class="eyebrow">Best matches</p><h2>Paige picked ${shown.length} for you</h2></div>` +
+    shown.map(({ book, score, parts }) => bookCardHTML(book, {
       score: `<span class="score">${score}/${max} match</span>`,
-      why: `<p class="why">Because ${esc(joinReasons(reasons))}.</p>`,
-    }, { genre: answers.genres.includes(book.g), mood: answers.mood, pace: book.p === answers.pace })).join('');
+      why: `<p class="why breakdown">${esc(breakdownText(parts, score))}</p>`,
+    }, { genre: answers.genres.includes(book.g), mood: answers.mood, pace: book.p === answers.pace }, 'match')).join('') +
+    (hiddenCount ? `<p class="more-note">+${hiddenCount} more book${hiddenCount === 1 ? '' : 's'} also scored ${cutoffScore} point${cutoffScore === 1 ? '' : 's'}.</p>` : '');
 }
 $('#btn-match').onclick = () => {
   lastMatches = matchBooks(answers);
@@ -443,6 +506,16 @@ document.addEventListener('click', e => {
   const id = Number(b.dataset.id), k = b.dataset.shelf, book = BOOKS.find(x => x.id === id);
   if (k === 'remove' || state.shelf[id] === k) { delete state.shelf[id]; toast(`Removed "${book.t}"`); }
   else { state.shelf[id] = k; toast(`"${book.t}" → ${SHELF_LABELS[k]}`); }
+  save(); renderShelf(); renderResults();
+});
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-rate-toggle]');
+  if (t) { const id = Number(t.dataset.rateToggle); ratingOpenId = ratingOpenId === id ? null : id; renderShelf(); return; }
+  const b = e.target.closest('[data-rate]'); if (!b) return;
+  const id = Number(b.dataset.id), v = b.dataset.rate, book = BOOKS.find(x => x.id === id);
+  if (v === 'clear') { delete state.ratings[id]; toast(`Cleared rating for "${book.t}"`); }
+  else { const n = Number(v); if (!(n >= 1 && n <= 10)) return; state.ratings[id] = n; toast(`Rated "${book.t}" ${n}/10`); }
   save(); renderShelf(); renderResults();
 });
 
